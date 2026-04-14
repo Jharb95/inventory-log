@@ -399,6 +399,21 @@
     cursor: pointer;
   }
   .clear-btn:active { background: var(--red); color: white; }
+  .dup-icon { font-size: 36px; text-align: center; margin-bottom: 10px; }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text); text-align: center; }
+  .dup-msg { font-size: 13px; color: var(--text3); text-align: center; margin-bottom: 14px; line-height: 1.5; }
+  .dup-location-box {
+    background: var(--surface2);
+    border: 1.5px solid #6366f1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .dup-location-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #6366f1; }
+  .dup-location-val { font-size: 18px; font-weight: 700; color: var(--text); }
   .toast {
     position: fixed;
     bottom: 30px;
@@ -494,6 +509,7 @@
         <option value="description">Description</option>
         <option value="location">Location</option>
         <option value="qty">Qty</option>
+        <option value="coordinator">Coordinator</option>
       </select>
     </div>
     <div class="results-count" id="resultsCount"></div>
@@ -537,6 +553,30 @@
     <div class="modal-btns">
       <button class="cancel-btn" onclick="closeModal()">Cancel</button>
       <button class="save-btn" id="saveEditBtn" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dupModal">
+  <div class="modal">
+    <div class="dup-icon">⚠️</div>
+    <h3>Part Already Logged</h3>
+    <p class="dup-msg" id="dupMsg"></p>
+    <div class="dup-location-box">
+      <span class="dup-location-label">Current location on file:</span>
+      <span class="dup-location-val" id="dupLocation"></span>
+    </div>
+    <div class="field">
+      <label>Update Location</label>
+      <input type="text" id="dup-location" autocomplete="off" autocorrect="off" autocapitalize="words" placeholder="Leave blank to keep current">
+    </div>
+    <div class="field">
+      <label>Update Quantity</label>
+      <input type="number" id="dup-qty" min="0" inputmode="numeric" placeholder="Enter new qty">
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" id="dupCancelBtn">Cancel</button>
+      <button class="save-btn" id="dupSaveBtn">Update Entry</button>
     </div>
   </div>
 </div>
@@ -653,6 +693,16 @@
 
     if (!partNumber || !location || !qty) { showToast("Fill in all fields first", true); return; }
 
+    const duplicate = allEntries.find(e => String(e.partNumber).toLowerCase() === partNumber.toLowerCase());
+    if (duplicate) {
+      openDupModal(duplicate, partNumber);
+      return;
+    }
+
+    saveNewEntry(coordinator, partNumber, description, location, qty);
+  }
+
+  function saveNewEntry(coordinator, partNumber, description, location, qty) {
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Saving...';
@@ -685,6 +735,54 @@
     })
     .catch(() => showToast("Failed to save. Check connection.", true))
     .finally(() => { btn.disabled = false; btn.innerHTML = "Log Entry"; });
+  }
+
+  function openDupModal(existing, partNumber) {
+    document.getElementById("dupMsg").textContent =
+      `Part #${partNumber} is already logged. Return it to its original location or update the location and quantity below.`;
+    document.getElementById("dupLocation").textContent = existing.location;
+    document.getElementById("dup-location").value = "";
+    document.getElementById("dup-qty").value = existing.qty;
+    document.getElementById("dupModal").classList.add("open");
+
+    document.getElementById("dupCancelBtn").onclick = function() {
+      document.getElementById("dupModal").classList.remove("open");
+    };
+
+    document.getElementById("dupSaveBtn").onclick = function() {
+      const newQty = document.getElementById("dup-qty").value.trim();
+      const newLocation = document.getElementById("dup-location").value.trim() || existing.location;
+      if (!newQty) { showToast("Enter a quantity", true); return; }
+      const coordinator = localStorage.getItem("coordinator_name");
+      const btn = document.getElementById("dupSaveBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      fetch(SCRIPT_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          id: existing.id,
+          coordinator,
+          partNumber: existing.partNumber,
+          description: existing.description || "",
+          location: newLocation,
+          qty: parseInt(newQty)
+        })
+      })
+      .then(() => {
+        showToast("Entry updated!");
+        document.getElementById("dupModal").classList.remove("open");
+        document.getElementById("partNumber").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("location").value = "";
+        document.getElementById("qty").value = "";
+        setTimeout(() => { prefetchEntries(); loadEntries(true); }, 1500);
+      })
+      .catch(() => showToast("Failed to update. Check connection.", true))
+      .finally(() => { btn.disabled = false; btn.innerHTML = "Update Entry"; });
+    };
   }
 
   function loadEntries(forceRefresh) {
@@ -726,6 +824,7 @@
         if (filterField === "description") return String(e.description || "").toLowerCase().includes(searchVal);
         if (filterField === "location") return String(e.location).toLowerCase().includes(searchVal);
         if (filterField === "qty") return String(e.qty).includes(searchVal);
+        if (filterField === "coordinator") return String(e.coordinator).toLowerCase().includes(searchVal);
         return (
           String(e.partNumber).toLowerCase().includes(searchVal) ||
           String(e.description || "").toLowerCase().includes(searchVal) ||

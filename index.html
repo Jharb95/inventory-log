@@ -106,8 +106,19 @@
   }
   .tab.active { color: var(--green); border-bottom-color: var(--green); }
 
-  .page { display: none; }
-  .page.active { display: block; }
+  .pages-wrapper {
+    overflow: hidden;
+    position: relative;
+  }
+  .pages-inner {
+    display: flex;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  .page {
+    min-width: 100%;
+    flex-shrink: 0;
+  }
 
   .container { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
   .card {
@@ -426,7 +437,10 @@
   <div class="tab" onclick="switchTab('entries')">All Entries</div>
 </div>
 
-<div class="page active" id="page-log">
+<div class="pages-wrapper">
+<div class="pages-inner" id="pagesInner">
+
+<div class="page" id="page-log">
   <div class="container">
     <div class="card">
       <h2>New Entry</h2>
@@ -462,6 +476,9 @@
     <button class="refresh-btn" onclick="loadEntries(true)">↻ Refresh</button>
     <div id="entriesList"><div class="loading-state">Loading entries...</div></div>
   </div>
+</div>
+
+</div>
 </div>
 
 <div class="modal-overlay" id="editModal">
@@ -562,12 +579,12 @@
   }
 
   function switchTab(tab) {
+    const isEntries = tab === "entries";
     document.querySelectorAll(".tab").forEach((t, i) => {
-      t.classList.toggle("active", (i === 0 && tab === "log") || (i === 1 && tab === "entries"));
+      t.classList.toggle("active", (i === 0 && !isEntries) || (i === 1 && isEntries));
     });
-    document.getElementById("page-log").classList.toggle("active", tab === "log");
-    document.getElementById("page-entries").classList.toggle("active", tab === "entries");
-    if (tab === "entries") loadEntries(true);
+    document.getElementById("pagesInner").style.transform = isEntries ? "translateX(-100%)" : "translateX(0)";
+    if (isEntries) loadEntries(true);
   }
 
   function showToast(msg, isError) {
@@ -766,8 +783,7 @@
       if (Math.abs(dy) > VERTICAL_LIMIT) return;
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
 
-      var activeTab = document.querySelector(".tab.active");
-      var isLog = document.getElementById("page-log").classList.contains("active");
+      var isLog = document.getElementById("pagesInner").style.transform !== "translateX(-100%)";
 
       if (dx < 0 && isLog) {
         switchTab("entries");

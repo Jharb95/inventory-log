@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16a34a">
+<title>Parts Inventory Log</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0f172a;
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+  header {
+    background: #16a34a;
+    padding: 18px 20px 14px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  .header-name {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  .change-name-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .tabs {
+    display: flex;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+  }
+  .tab {
+    flex: 1;
+    padding: 13px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .tab.active { color: #16a34a; border-bottom-color: #16a34a; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+  .card {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    margin-bottom: 14px;
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 6px;
+  }
+  input {
+    width: 100%;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 13px 14px;
+    font-size: 16px;
+    color: #f1f5f9;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: #16a34a; }
+  input::placeholder { color: #475569; }
+
+  .submit-btn {
+    width: 100%;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+  .submit-btn:active { background: #15803d; transform: scale(0.98); }
+  .submit-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; transform: none; }
+
+  .entry-card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-left: 3px solid #16a34a;
+  }
+  .entry-card.edited { border-left-color: #f59e0b; }
+  .entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .entry-part { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  .entry-qty {
+    font-size: 13px;
+    font-weight: 600;
+    color: #16a34a;
+    background: #052e16;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .entry-meta { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+  .entry-meta span { margin-right: 10px; }
+  .entry-coordinator { font-size: 12px; color: #94a3b8; }
+  .entry-edited-badge {
+    display: inline-block;
+    font-size: 11px;
+    color: #f59e0b;
+    background: #1c1408;
+    padding: 1px 7px;
+    border-radius: 20px;
+    margin-top: 4px;
+  }
+  .edit-btn {
+    margin-top: 10px;
+    width: 100%;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    color: #94a3b8;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .edit-btn:active { border-color: #16a34a; color: #16a34a; }
+
+  /* NAME POPUP */
+  .name-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .name-overlay.hidden { display: none; }
+  .name-popup {
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 30px 24px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+  .name-popup .icon {
+    font-size: 40px;
+    margin-bottom: 14px;
+  }
+  .name-popup h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 8px;
+  }
+  .name-popup p {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .name-popup input {
+    margin-bottom: 14px;
+    text-align: center;
+    font-size: 18px;
+  }
+  .name-popup .confirm-btn {
+    width: 100%;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .name-popup .confirm-btn:active { background: #15803d; }
+
+  /* EDIT MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #1e293b;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #f1f5f9; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .cancel-btn {
+    flex: 1;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    color: #94a3b8;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .save-btn {
+    flex: 2;
+    background: #16a34a;
+    border: none;
+    color: white;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .save-btn:disabled { background: #334155; color: #64748b; }
+
+  .loading-state {
+    text-align: center;
+    color: #475569;
+    font-size: 14px;
+    padding: 30px 0;
+  }
+  .no-entries {
+    text-align: center;
+    color: #475569;
+    font-size: 14px;
+    padding: 30px 0;
+  }
+  .refresh-btn {
+    display: block;
+    margin: 0 auto 16px;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    color: #94a3b8;
+    border-radius: 10px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #16a34a;
+    color: white;
+    padding: 13px 22px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+    z-index: 200;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .toast.error { background: #dc2626; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- NAME POPUP - blocks everything until name is entered -->
+<div class="name-overlay" id="nameOverlay">
+  <div class="name-popup">
+    <div class="icon">👷</div>
+    <h2>Welcome</h2>
+    <p>Enter your name to get started. You'll only need to do this once on this device.</p>
+    <input type="text" id="nameInput" placeholder="Your full name" autocomplete="name" autocorrect="off" autocapitalize="words">
+    <button class="confirm-btn" onclick="confirmName()">Continue</button>
+  </div>
+</div>
+
+<header>
+  <h1>Parts Inventory Log</h1>
+  <div class="header-name" id="headerName"></div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('log')">Log Entry</div>
+  <div class="tab" onclick="switchTab('entries')">All Entries</div>
+</div>
+
+<!-- LOG ENTRY PAGE -->
+<div class="page active" id="page-log">
+  <div class="container">
+    <div class="card">
+      <h2>New Entry</h2>
+      <div class="field">
+        <label>Part Number</label>
+        <input type="text" id="partNumber" placeholder="e.g. PN-00482" autocomplete="off" autocorrect="off" autocapitalize="characters">
+      </div>
+      <div class="field">
+        <label>Location</label>
+        <input type="text" id="location" placeholder="e.g. Shelf B3" autocomplete="off" autocorrect="off" autocapitalize="words">
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="qty" placeholder="0" min="0" inputmode="numeric">
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Log Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALL ENTRIES PAGE -->
+<div class="page" id="page-entries">
+  <div class="container">
+    <button class="refresh-btn" onclick="loadEntries()">↻ Refresh</button>
+    <div id="entriesList"><div class="loading-state">Loading entries...</div></div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>Edit Entry</h3>
+    <div class="field">
+      <label>Part Number</label>
+      <input type="text" id="edit-partNumber" autocomplete="off" autocorrect="off" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>Location</label>
+      <input type="text" id="edit-location" autocomplete="off" autocorrect="off" autocapitalize="words">
+    </div>
+    <div class="field">
+      <label>Quantity</label>
+      <input type="number" id="edit-qty" min="0" inputmode="numeric">
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+      <button class="save-btn" id="saveEditBtn" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyO2pylEls2Kk9Ido2Hbfzrrc77l53d1RkSh0lU7YPrYKskavkqjZJFeakFxrNAerHF6A/exec";
+  let allEntries = [];
+  let editingId = null;
+
+  window.onload = function() {
+    const savedName = localStorage.getItem("coordinator_name");
+    if (savedName) {
+      dismissNamePopup(savedName);
+    } else {
+      document.getElementById("nameOverlay").classList.remove("hidden");
+      setTimeout(() => document.getElementById("nameInput").focus(), 300);
+    }
+  };
+
+  function confirmName() {
+    const name = document.getElementById("nameInput").value.trim();
+    if (!name) {
+      document.getElementById("nameInput").style.borderColor = "#dc2626";
+      setTimeout(() => document.getElementById("nameInput").style.borderColor = "#334155", 1500);
+      return;
+    }
+    localStorage.setItem("coordinator_name", name);
+    dismissNamePopup(name);
+  }
+
+  function dismissNamePopup(name) {
+    document.getElementById("nameOverlay").classList.add("hidden");
+    document.getElementById("headerName").innerHTML =
+      name + ' <button class="change-name-btn" onclick="changeName()">change</button>';
+  }
+
+  function changeName() {
+    document.getElementById("nameInput").value = localStorage.getItem("coordinator_name") || "";
+    document.getElementById("nameOverlay").classList.remove("hidden");
+    setTimeout(() => document.getElementById("nameInput").focus(), 300);
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll(".tab").forEach((t, i) => {
+      t.classList.toggle("active", (i === 0 && tab === "log") || (i === 1 && tab === "entries"));
+    });
+    document.getElementById("page-log").classList.toggle("active", tab === "log");
+    document.getElementById("page-entries").classList.toggle("active", tab === "entries");
+    if (tab === "entries") loadEntries();
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast" + (isError ? " error" : "") + " show";
+    setTimeout(() => t.className = "toast" + (isError ? " error" : ""), 2800);
+  }
+
+  function formatDate(val) {
+    if (!val) return "";
+    const d = new Date(val);
+    if (isNaN(d)) return val;
+    return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) +
+      " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function submitEntry() {
+    const coordinator = localStorage.getItem("coordinator_name");
+    const partNumber = document.getElementById("partNumber").value.trim();
+    const location = document.getElementById("location").value.trim();
+    const qty = document.getElementById("qty").value.trim();
+
+    if (!partNumber || !location || !qty) {
+      showToast("Fill in all fields first", true);
+      return;
+    }
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving...';
+
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coordinator, partNumber, location, qty: parseInt(qty) })
+    })
+    .then(() => {
+      showToast("Entry logged!");
+      document.getElementById("partNumber").value = "";
+      document.getElementById("location").value = "";
+      document.getElementById("qty").value = "";
+      document.getElementById("partNumber").focus();
+    })
+    .catch(() => showToast("Failed to save. Check connection.", true))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = "Log Entry";
+    });
+  }
+
+  function loadEntries() {
+    const list = document.getElementById("entriesList");
+    list.innerHTML = '<div class="loading-state"><span class="spinner"></span> Loading...</div>';
+    fetch(SCRIPT_URL + "?t=" + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        if (data.result !== "success") throw new Error(data.message);
+        allEntries = data.data || [];
+        renderEntries();
+      })
+      .catch(() => {
+        list.innerHTML = '<div class="no-entries">Could not load entries. Tap Refresh to try again.</div>';
+      });
+  }
+
+  function renderEntries() {
+    const list = document.getElementById("entriesList");
+    if (allEntries.length === 0) {
+      list.innerHTML = '<div class="no-entries">No entries yet</div>';
+      return;
+    }
+    list.innerHTML = allEntries.map(e => {
+      const wasEdited = e.lastEditedBy && e.lastEditedBy !== "";
+      return `
+        <div class="entry-card ${wasEdited ? "edited" : ""}">
+          <div class="entry-top">
+            <span class="entry-part">${e.partNumber}</span>
+            <span class="entry-qty">Qty: ${e.qty}</span>
+          </div>
+          <div class="entry-meta">
+            <span>📍 ${e.location}</span>
+            <span>🕐 ${formatDate(e.timestamp)}</span>
+          </div>
+          <div class="entry-coordinator">Updated by: ${e.coordinator}</div>
+          ${wasEdited ? `<div class="entry-edited-badge">✏️ Edited by: ${e.lastEditedBy} · ${formatDate(e.lastEditedAt)}</div>` : ""}
+          <button class="edit-btn" onclick="openEdit('${e.id}')">Edit Entry</button>
+        </div>`;
+    }).join("");
+  }
+
+  function openEdit(id) {
+    const entry = allEntries.find(e => String(e.id) === String(id));
+    if (!entry) return;
+    editingId = id;
+    document.getElementById("edit-partNumber").value = entry.partNumber;
+    document.getElementById("edit-location").value = entry.location;
+    document.getElementById("edit-qty").value = entry.qty;
+    document.getElementById("editModal").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("editModal").classList.remove("open");
+    editingId = null;
+  }
+
+  function saveEdit() {
+    const coordinator = localStorage.getItem("coordinator_name");
+    const partNumber = document.getElementById("edit-partNumber").value.trim();
+    const location = document.getElementById("edit-location").value.trim();
+    const qty = document.getElementById("edit-qty").value.trim();
+
+    if (!partNumber || !location || !qty) {
+      showToast("Fill in all fields", true);
+      return;
+    }
+
+    const btn = document.getElementById("saveEditBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", id: editingId, coordinator, partNumber, location, qty: parseInt(qty) })
+    })
+    .then(() => {
+      showToast("Entry updated!");
+      closeModal();
+      loadEntries();
+    })
+    .catch(() => showToast("Failed to update. Check connection.", true))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = "Save Changes";
+    });
+  }
+
+  document.getElementById("nameInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") confirmName();
+  });
+</script>
+</body>
+</html>

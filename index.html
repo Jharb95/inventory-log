@@ -222,6 +222,7 @@
     text-align: right;
   }
   .entry-coordinator { font-size: 12px; color: var(--text2); }
+  .entry-description { font-size: 12px; color: var(--text2); font-style: italic; margin-bottom: 4px; }
   .entry-edited-badge {
     display: inline-flex;
     align-items: center;
@@ -381,6 +382,23 @@
     font-weight: 600;
     cursor: pointer;
   }
+  .mine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .clear-btn {
+    background: none;
+    border: 1.5px solid var(--red);
+    color: var(--red);
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .clear-btn:active { background: var(--red); color: white; }
   .toast {
     position: fixed;
     bottom: 30px;
@@ -414,13 +432,13 @@
 </head>
 <body>
 
-<div class="name-overlay" id="nameOverlay">
+<div class="name-overlay hidden" id="nameOverlay">
   <div class="name-popup">
     <div class="icon">👷</div>
     <h2>Welcome</h2>
     <p>Enter your name to get started. You'll only need to do this once on this device.</p>
     <input type="text" id="nameInput" placeholder="Your full name" autocomplete="name" autocorrect="off" autocapitalize="words">
-    <button class="confirm-btn" onclick="confirmName()">Continue</button>
+    <button class="confirm-btn" id="confirmNameBtn">Continue</button>
   </div>
 </div>
 
@@ -435,6 +453,7 @@
 <div class="tabs">
   <div class="tab active" onclick="switchTab('log')">Log Entry</div>
   <div class="tab" onclick="switchTab('entries')">All Entries</div>
+  <div class="tab" onclick="switchTab('mine')">My Entries</div>
 </div>
 
 <div class="pages-wrapper">
@@ -447,6 +466,10 @@
       <div class="field">
         <label>Part Number</label>
         <input type="text" id="partNumber" placeholder="e.g. PN-00482" autocomplete="off" autocorrect="off" autocapitalize="characters">
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="description" placeholder="e.g. Hydraulic Filter" autocomplete="off" autocorrect="off" autocapitalize="words">
       </div>
       <div class="field">
         <label>Location</label>
@@ -468,6 +491,7 @@
       <select class="search-filter" id="searchFilter" onchange="renderEntries()">
         <option value="all">All Fields</option>
         <option value="partNumber">Part #</option>
+        <option value="description">Description</option>
         <option value="location">Location</option>
         <option value="qty">Qty</option>
       </select>
@@ -475,6 +499,16 @@
     <div class="results-count" id="resultsCount"></div>
     <button class="refresh-btn" onclick="loadEntries(true)">↻ Refresh</button>
     <div id="entriesList"><div class="loading-state">Loading entries...</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-mine">
+  <div class="container">
+    <div class="mine-header">
+      <div class="results-count" id="mineCount"></div>
+      <button class="clear-btn" onclick="clearMineEntries()">🗑 Clear All</button>
+    </div>
+    <div id="mineList"><div class="loading-state">Your logged entries will appear here</div></div>
   </div>
 </div>
 
@@ -487,6 +521,10 @@
     <div class="field">
       <label>Part Number</label>
       <input type="text" id="edit-partNumber" autocomplete="off" autocorrect="off" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <input type="text" id="edit-description" autocomplete="off" autocorrect="off" autocapitalize="words">
     </div>
     <div class="field">
       <label>Location</label>
@@ -578,13 +616,17 @@
     setTimeout(() => document.getElementById("nameInput").focus(), 300);
   }
 
+  const TABS = ["log", "entries", "mine"];
+  let currentTabIndex = 0;
+
   function switchTab(tab) {
-    const isEntries = tab === "entries";
+    currentTabIndex = TABS.indexOf(tab);
     document.querySelectorAll(".tab").forEach((t, i) => {
-      t.classList.toggle("active", (i === 0 && !isEntries) || (i === 1 && isEntries));
+      t.classList.toggle("active", i === currentTabIndex);
     });
-    document.getElementById("pagesInner").style.transform = isEntries ? "translateX(-100%)" : "translateX(0)";
-    if (isEntries) loadEntries(true);
+    document.getElementById("pagesInner").style.transform = `translateX(-${currentTabIndex * 100}%)`;
+    if (tab === "entries") loadEntries(true);
+    if (tab === "mine") renderMineEntries();
   }
 
   function showToast(msg, isError) {
@@ -605,6 +647,7 @@
   function submitEntry() {
     const coordinator = localStorage.getItem("coordinator_name");
     const partNumber = document.getElementById("partNumber").value.trim();
+    const description = document.getElementById("description").value.trim();
     const location = document.getElementById("location").value.trim();
     const qty = document.getElementById("qty").value.trim();
 
@@ -617,11 +660,21 @@
     fetch(SCRIPT_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coordinator, partNumber, location, qty: parseInt(qty) })
+      body: JSON.stringify({ coordinator, partNumber, description, location, qty: parseInt(qty) })
     })
     .then(() => {
       showToast("Entry logged!");
+      const newEntry = {
+        partNumber, description, location, qty: parseInt(qty),
+        coordinator, timestamp: new Date().toISOString(),
+        id: "local-" + Date.now(), lastEditedBy: "", lastEditedAt: ""
+      };
+      const mineCache = JSON.parse(localStorage.getItem("mine_cache") || "[]");
+      mineCache.unshift(newEntry);
+      localStorage.setItem("mine_cache", JSON.stringify(mineCache));
+      renderMineEntries();
       document.getElementById("partNumber").value = "";
+      document.getElementById("description").value = "";
       document.getElementById("location").value = "";
       document.getElementById("qty").value = "";
       document.getElementById("partNumber").focus();
@@ -670,10 +723,12 @@
     if (searchVal) {
       filtered = allEntries.filter(e => {
         if (filterField === "partNumber") return String(e.partNumber).toLowerCase().includes(searchVal);
+        if (filterField === "description") return String(e.description || "").toLowerCase().includes(searchVal);
         if (filterField === "location") return String(e.location).toLowerCase().includes(searchVal);
         if (filterField === "qty") return String(e.qty).includes(searchVal);
         return (
           String(e.partNumber).toLowerCase().includes(searchVal) ||
+          String(e.description || "").toLowerCase().includes(searchVal) ||
           String(e.location).toLowerCase().includes(searchVal) ||
           String(e.qty).includes(searchVal) ||
           String(e.coordinator).toLowerCase().includes(searchVal)
@@ -704,6 +759,7 @@
               <div class="entry-part">${e.partNumber}</div>
               <div><span class="entry-location">📍 ${e.location}</span></div>
               <div><span class="entry-qty">Qty: ${e.qty}</span></div>
+              ${e.description ? `<div class="entry-description">${e.description}</div>` : ""}
               <div class="entry-coordinator">Updated by: ${e.coordinator}</div>
               ${wasEdited ? `<div class="entry-edited-badge">✏️ Edited by ${e.lastEditedBy} · ${formatDate(e.lastEditedAt)}</div>` : ""}
             </div>
@@ -721,6 +777,7 @@
     if (!entry) return;
     editingId = id;
     document.getElementById("edit-partNumber").value = entry.partNumber;
+    document.getElementById("edit-description").value = entry.description || "";
     document.getElementById("edit-location").value = entry.location;
     document.getElementById("edit-qty").value = entry.qty;
     document.getElementById("editModal").classList.add("open");
@@ -734,6 +791,7 @@
   function saveEdit() {
     const coordinator = localStorage.getItem("coordinator_name");
     const partNumber = document.getElementById("edit-partNumber").value.trim();
+    const description = document.getElementById("edit-description").value.trim();
     const location = document.getElementById("edit-location").value.trim();
     const qty = document.getElementById("edit-qty").value.trim();
 
@@ -746,7 +804,7 @@
     fetch(SCRIPT_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "edit", id: editingId, coordinator, partNumber, location, qty: parseInt(qty) })
+      body: JSON.stringify({ action: "edit", id: editingId, coordinator, partNumber, description, location, qty: parseInt(qty) })
     })
     .then(() => {
       showToast("Entry updated!");
@@ -757,6 +815,42 @@
     .finally(() => { btn.disabled = false; btn.innerHTML = "Save Changes"; });
   }
 
+  function renderMineEntries() {
+    const list = document.getElementById("mineList");
+    const countEl = document.getElementById("mineCount");
+    const mineCache = JSON.parse(localStorage.getItem("mine_cache") || "[]");
+    if (countEl) countEl.textContent = `${mineCache.length} entr${mineCache.length === 1 ? "y" : "ies"} logged on this device`;
+    if (mineCache.length === 0) {
+      list.innerHTML = '<div class="no-entries">No entries logged on this device yet</div>';
+      return;
+    }
+    list.innerHTML = mineCache.map(e => {
+      return `
+        <div class="entry-card">
+          <div class="entry-top">
+            <div class="entry-left">
+              <div class="entry-part">${e.partNumber}</div>
+              <div><span class="entry-location">📍 ${e.location}</span></div>
+              <div><span class="entry-qty">Qty: ${e.qty}</span></div>
+              ${e.description ? `<div class="entry-description">${e.description}</div>` : ""}
+              <div class="entry-coordinator">Updated by: ${e.coordinator}</div>
+            </div>
+            <div class="entry-right">
+              <span class="entry-timestamp">${formatDate(e.timestamp)}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function clearMineEntries() {
+    if (!confirm("Clear all entries logged on this device? This only removes them from this device's history, not from the Google Sheet.")) return;
+    localStorage.removeItem("mine_cache");
+    renderMineEntries();
+    showToast("Device history cleared");
+  }
+
+  document.getElementById("confirmNameBtn").addEventListener("click", confirmName);
   document.getElementById("nameInput").addEventListener("keydown", function(e) {
     if (e.key === "Enter") confirmName();
   });
@@ -766,7 +860,6 @@
     var touchStartY = 0;
     var SWIPE_THRESHOLD = 50;
     var VERTICAL_LIMIT = 75;
-    var currentTab = "log";
 
     document.addEventListener("touchstart", function(e) {
       touchStartX = e.touches[0].clientX;
@@ -774,7 +867,7 @@
     }, { passive: true });
 
     document.addEventListener("touchend", function(e) {
-      if (document.getElementById("nameOverlay") && !document.getElementById("nameOverlay").classList.contains("hidden")) return;
+      if (!document.getElementById("nameOverlay").classList.contains("hidden")) return;
       if (document.getElementById("editModal").classList.contains("open")) return;
 
       var dx = e.changedTouches[0].clientX - touchStartX;
@@ -783,12 +876,10 @@
       if (Math.abs(dy) > VERTICAL_LIMIT) return;
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
 
-      var isLog = document.getElementById("pagesInner").style.transform !== "translateX(-100%)";
-
-      if (dx < 0 && isLog) {
-        switchTab("entries");
-      } else if (dx > 0 && !isLog) {
-        switchTab("log");
+      if (dx < 0 && currentTabIndex < TABS.length - 1) {
+        switchTab(TABS[currentTabIndex + 1]);
+      } else if (dx > 0 && currentTabIndex > 0) {
+        switchTab(TABS[currentTabIndex - 1]);
       }
     }, { passive: true });
   })();

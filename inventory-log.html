@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16a34a">
+<title>Parts Inventory Log</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0f172a;
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 0 0 40px 0;
+  }
+
+  header {
+    background: #16a34a;
+    padding: 18px 20px 14px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  header p {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+
+  .card {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    margin-bottom: 14px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field:last-child {
+    margin-bottom: 0;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 6px;
+  }
+
+  input {
+    width: 100%;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 13px 14px;
+    font-size: 16px;
+    color: #f1f5f9;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+
+  input:focus {
+    border-color: #16a34a;
+  }
+
+  input::placeholder {
+    color: #475569;
+  }
+
+  .submit-btn {
+    width: 100%;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+
+  .submit-btn:active {
+    background: #15803d;
+    transform: scale(0.98);
+  }
+
+  .submit-btn:disabled {
+    background: #334155;
+    color: #64748b;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #16a34a;
+    color: white;
+    padding: 13px 22px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  .toast.error {
+    background: #dc2626;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .recent-section h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+
+  .entry-card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-left: 3px solid #16a34a;
+  }
+
+  .entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+
+  .entry-part {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f1f5f9;
+  }
+
+  .entry-qty {
+    font-size: 13px;
+    font-weight: 600;
+    color: #16a34a;
+    background: #052e16;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .entry-meta {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .entry-meta span {
+    margin-right: 10px;
+  }
+
+  .entry-coordinator {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .no-entries {
+    text-align: center;
+    color: #475569;
+    font-size: 14px;
+    padding: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Parts Inventory Log</h1>
+  <p>Maintenance Department</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>New Entry</h2>
+
+    <div class="field">
+      <label>Your Name</label>
+      <input type="text" id="coordinator" placeholder="e.g. John Doe" autocomplete="name" autocorrect="off">
+    </div>
+
+    <div class="field">
+      <label>Part Number</label>
+      <input type="text" id="partNumber" placeholder="e.g. PN-00482" autocomplete="off" autocorrect="off" autocapitalize="characters">
+    </div>
+
+    <div class="field">
+      <label>Location</label>
+      <input type="text" id="location" placeholder="e.g. Shelf B3" autocomplete="off" autocorrect="off" autocapitalize="words">
+    </div>
+
+    <div class="field">
+      <label>Quantity</label>
+      <input type="number" id="qty" placeholder="0" min="0" inputmode="numeric">
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Log Entry</button>
+  </div>
+
+  <div class="recent-section">
+    <h2>Recent Entries</h2>
+    <div id="recentList"><div class="no-entries">No entries yet</div></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyO2pylEls2Kk9Ido2Hbfzrrc77l53d1RkSh0lU7YPrYKskavkqjZJFeakFxrNAerHF6A/exec";
+
+  const recentEntries = [];
+
+  window.onload = function() {
+    const savedName = localStorage.getItem("coordinator_name");
+    if (savedName) document.getElementById("coordinator").value = savedName;
+  };
+
+  function showToast(msg, isError) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast" + (isError ? " error" : "") + " show";
+    setTimeout(() => t.className = "toast" + (isError ? " error" : ""), 2800);
+  }
+
+  function submitEntry() {
+    const coordinator = document.getElementById("coordinator").value.trim();
+    const partNumber = document.getElementById("partNumber").value.trim();
+    const location = document.getElementById("location").value.trim();
+    const qty = document.getElementById("qty").value.trim();
+
+    if (!coordinator || !partNumber || !location || !qty) {
+      showToast("Fill in all fields first", true);
+      return;
+    }
+
+    localStorage.setItem("coordinator_name", coordinator);
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving...';
+
+    const payload = { coordinator, partNumber, location, qty: parseInt(qty) };
+
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(() => {
+      showToast("Entry logged!");
+      addToRecent(payload);
+      document.getElementById("partNumber").value = "";
+      document.getElementById("location").value = "";
+      document.getElementById("qty").value = "";
+      document.getElementById("partNumber").focus();
+    })
+    .catch(() => {
+      showToast("Failed to save. Check connection.", true);
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = "Log Entry";
+    });
+  }
+
+  function addToRecent(entry) {
+    recentEntries.unshift({ ...entry, time: new Date() });
+    if (recentEntries.length > 5) recentEntries.pop();
+    renderRecent();
+  }
+
+  function renderRecent() {
+    const list = document.getElementById("recentList");
+    if (recentEntries.length === 0) {
+      list.innerHTML = '<div class="no-entries">No entries yet</div>';
+      return;
+    }
+    list.innerHTML = recentEntries.map(e => {
+      const t = e.time;
+      const timeStr = t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const dateStr = t.toLocaleDateString([], { month: "short", day: "numeric" });
+      return `
+        <div class="entry-card">
+          <div class="entry-top">
+            <span class="entry-part">${e.partNumber}</span>
+            <span class="entry-qty">Qty: ${e.qty}</span>
+          </div>
+          <div class="entry-meta">
+            <span>📍 ${e.location}</span>
+            <span>🕐 ${timeStr}, ${dateStr}</span>
+          </div>
+          <div class="entry-coordinator">${e.coordinator}</div>
+        </div>`;
+    }).join("");
+  }
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") submitEntry();
+  });
+</script>
+
+</body>
+</html>

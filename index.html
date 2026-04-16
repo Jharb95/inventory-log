@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16a34a">
+<title>Parts Inventory Log</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #0f172a;
+    --border: #334155;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --text4: #475569;
+    --green: #16a34a;
+    --green-bg: #052e16;
+    --amber: #f59e0b;
+    --amber-bg: #1c1408;
+    --red: #dc2626;
+  }
+  [data-theme="light"] {
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --surface2: #f8fafc;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text2: #475569;
+    --text3: #64748b;
+    --text4: #94a3b8;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --amber: #d97706;
+    --amber-bg: #fef3c7;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    width: 100%;
+    padding-bottom: max(40px, env(safe-area-inset-bottom, 0px));
+    transition: background 0.2s, color 0.2s;
+  }
+  header {
+    background: var(--green);
+    padding-top: max(14px, env(safe-area-inset-top, 0px));
+    padding-bottom: 12px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    width: 100%;
+  }
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .tab {
+    flex: 1;
+    padding: 13px 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .pages-wrapper {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+  .pages-inner {
+    display: flex;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    width: 100%;
+  }
+  .page {
+    min-width: 100%;
+    width: 100%;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px max(16px, env(safe-area-inset-right, 16px)) 20px max(16px, env(safe-area-inset-left, 16px));
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  header h1 { font-size: 18px; font-weight: 700; color: white; }
+  .header-name { font-size: 12px; color: rgba(255,255,255,0.88); font-weight: 500; }
+  .change-name-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .theme-toggle {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 5px 12px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text2);
+    margin-bottom: 14px;
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: var(--green); }
+  input::placeholder { color: var(--text4); }
+
+  .submit-btn {
+    width: 100%;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+  .submit-btn:active { background: #15803d; transform: scale(0.98); }
+  .submit-btn:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; transform: none; }
+
+  .entry-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--green);
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .entry-card.edited { border-left-color: var(--amber); }
+
+  .entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    width: 100%;
+    min-width: 0;
+  }
+  .entry-left {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .entry-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-grow: 0;
+    max-width: 45%;
+    min-width: 0;
+  }
+
+  .entry-part {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .entry-location {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6366f1;
+    background: #1e1b4b;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    margin-bottom: 5px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  [data-theme="light"] .entry-location {
+    color: #4f46e5;
+    background: #ede9fe;
+  }
+  .entry-qty {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green);
+    background: var(--green-bg);
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    margin-bottom: 8px;
+  }
+  .entry-timestamp {
+    font-size: 11px;
+    color: var(--text3);
+    white-space: pre-line;
+    text-align: right;
+    max-width: 100%;
+    line-height: 1.4;
+  }
+  .entry-coordinator {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: normal;
+    word-break: break-word;
+    margin-top: 8px;
+    width: 100%;
+  }
+  .entry-description { font-size: 12px; color: var(--text2); font-style: italic; margin-bottom: 4px; }
+  .entry-edited-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 10px;
+    color: var(--amber);
+    background: var(--amber-bg);
+    padding: 3px 7px;
+    border-radius: 10px;
+    margin-top: 2px;
+    max-width: 100%;
+    word-break: break-word;
+    text-align: right;
+    line-height: 1.5;
+  }
+  .entry-edited-badge .badge-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .entry-edited-badge .badge-date {
+    white-space: nowrap;
+    opacity: 0.85;
+  }
+  .edit-btn {
+    margin-top: 10px;
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text2);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .edit-btn:active { border-color: var(--green); color: var(--green); }
+
+  .name-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .name-overlay.hidden { display: none; }
+  .name-popup {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 30px 24px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+  .name-popup .icon { font-size: 40px; margin-bottom: 14px; }
+  .name-popup h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .name-popup p { font-size: 14px; color: var(--text3); margin-bottom: 20px; line-height: 1.5; }
+  .name-popup input { margin-bottom: 14px; text-align: center; font-size: 18px; }
+  .name-popup .confirm-btn {
+    width: 100%;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .cancel-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text2);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .save-btn {
+    flex: 2;
+    background: var(--green);
+    border: none;
+    color: white;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .save-btn:disabled { background: var(--border); color: var(--text3); }
+
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  .search-input:focus { border-color: var(--green); }
+  .search-input::placeholder { color: var(--text4); }
+  .search-filter {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 10px;
+    font-size: 13px;
+    color: var(--text2);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .search-filter:focus { border-color: var(--green); }
+  .results-count {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 10px;
+    text-align: right;
+  }
+  .no-entries { text-align: center; color: var(--text3); font-size: 14px; padding: 30px 0; }
+  .refresh-btn {
+    display: block;
+    margin: 0 auto 16px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text2);
+    border-radius: 10px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .clear-btn {
+    background: none;
+    border: 1.5px solid var(--red);
+    color: var(--red);
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .clear-btn:active { background: var(--red); color: white; }
+  .mine-trash-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .mine-trash-btn:active { color: var(--red); background: var(--surface2); }
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--green);
+    border-radius: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 40;
+    margin-top: 4px;
+  }
+  .autocomplete-dropdown.open { display: block; }
+  .autocomplete-item {
+    padding: 12px 14px;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:active { background: var(--surface2); }
+  .autocomplete-item mark {
+    background: none;
+    color: var(--green);
+    font-weight: 700;
+  }
+  .autocomplete-empty {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .dup-icon { font-size: 36px; text-align: center; margin-bottom: 10px; }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text); text-align: center; }
+  .dup-msg { font-size: 13px; color: var(--text3); text-align: center; margin-bottom: 14px; line-height: 1.5; }
+  .dup-location-box {
+    background: var(--surface2);
+    border: 1.5px solid #6366f1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .dup-location-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #6366f1; }
+  .dup-location-val { font-size: 18px; font-weight: 700; color: var(--text); }
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: white;
+    padding: 13px 22px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+    z-index: 200;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .toast.error { background: var(--red); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .scroll-top-btn {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top, 16px));
+    left: max(16px, env(safe-area-inset-left, 16px));
+    z-index: 99;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: translateY(-8px);
+  }
+  .scroll-top-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .scroll-top-btn:active {
+    background: #15803d;
+    transform: scale(0.92);
+  }
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="name-overlay hidden" id="nameOverlay">
+  <div class="name-popup">
+    <div class="icon">👷</div>
+    <h2>Welcome</h2>
+    <p>Enter your name to get started. You'll only need to do this once on this device.</p>
+    <input type="text" id="nameInput" placeholder="Your full name" autocomplete="name" autocorrect="off" autocapitalize="words">
+    <button class="confirm-btn" id="confirmNameBtn">Continue</button>
+  </div>
+</div>
+
+<header>
+  <div class="header-top">
+    <h1>Parts Inventory Log</h1>
+    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">☀️ Light</button>
+  </div>
+  <div class="header-name" id="headerName"></div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('log')">Log Entry</div>
+  <div class="tab" onclick="switchTab('entries')">All Entries</div>
+  <div class="tab" onclick="switchTab('mine')">My Entries</div>
+</div>
+
+<div class="pages-wrapper">
+<div class="pages-inner" id="pagesInner">
+
+<div class="page" id="page-log">
+  <div class="container">
+    <div class="card">
+      <h2>New Entry</h2>
+      <div class="field">
+        <label>Part Number</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="partNumber" placeholder="e.g. DB-081" autocomplete="off" autocorrect="off" autocapitalize="characters" oninput="onPartInput(this.value)" onblur="hideDropdown()">
+          <div class="autocomplete-dropdown" id="partDropdown"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="description" placeholder="e.g. Hydraulic Filter" autocomplete="off" autocorrect="off" autocapitalize="words">
+      </div>
+      <div class="field">
+        <label>Location</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="location" placeholder="e.g. Shelf B3" autocomplete="off" autocorrect="off" autocapitalize="words" oninput="onLocationInput(this.value)" onblur="hideLocationDropdown()">
+          <div class="autocomplete-dropdown" id="locationDropdown"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="qty" placeholder="0" min="0" inputmode="numeric">
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Log Entry</button>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-entries">
+  <div class="container">
+    <div class="search-bar">
+      <input class="search-input" type="text" id="searchInput" placeholder="Search entries..." autocomplete="off" autocorrect="off" oninput="renderEntries()">
+      <select class="search-filter" id="searchFilter" onchange="renderEntries()">
+        <option value="all">All Fields</option>
+        <option value="partNumber">Part #</option>
+        <option value="description">Description</option>
+        <option value="location">Location</option>
+        <option value="qty">Qty</option>
+        <option value="coordinator">Coordinator</option>
+        <option value="dateAdded">Date Added</option>
+        <option value="dateEdited">Date Edited</option>
+      </select>
+    </div>
+    <div class="results-count" id="resultsCount"></div>
+    <button class="refresh-btn" onclick="loadEntries(true)">↻ Refresh</button>
+    <div id="entriesList"><div class="loading-state">Loading entries...</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-mine">
+  <div class="container">
+    <div class="mine-header">
+      <div class="results-count" id="mineCount"></div>
+      <button class="clear-btn" onclick="clearMineEntries()">🗑 Clear All</button>
+    </div>
+    <div id="mineList"><div class="loading-state">Your logged entries will appear here</div></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>Edit Entry</h3>
+    <div class="field">
+      <label>Part Number</label>
+      <input type="text" id="edit-partNumber" autocomplete="off" autocorrect="off" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <input type="text" id="edit-description" autocomplete="off" autocorrect="off" autocapitalize="words">
+    </div>
+    <div class="field">
+      <label>Location</label>
+      <input type="text" id="edit-location" autocomplete="off" autocorrect="off" autocapitalize="words">
+    </div>
+    <div class="field">
+      <label>Quantity</label>
+      <input type="number" id="edit-qty" min="0" inputmode="numeric">
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+      <button class="save-btn" id="saveEditBtn" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dupModal">
+  <div class="modal">
+    <div class="dup-icon">⚠️</div>
+    <h3>Part Already Logged</h3>
+    <p class="dup-msg" id="dupMsg"></p>
+    <div class="dup-location-box">
+      <span class="dup-location-label">Current location on file:</span>
+      <span class="dup-location-val" id="dupLocation"></span>
+    </div>
+    <div class="field">
+      <label>Update Location</label>
+      <input type="text" id="dup-location" autocomplete="off" autocorrect="off" autocapitalize="words" placeholder="Leave blank to keep current">
+    </div>
+    <div class="field">
+      <label>Update Quantity</label>
+      <input type="number" id="dup-qty" min="0" inputmode="numeric" placeholder="Enter new qty">
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" id="dupCancelBtn">Cancel</button>
+      <button class="save-btn" id="dupSaveBtn">Update Entry</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<button class="scroll-top-btn" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyO2pylEls2Kk9Ido2Hbfzrrc77l53d1RkSh0lU7YPrYKskavkqjZJFeakFxrNAerHF6A/exec";
+  const CACHE_KEY = "inventory_cache";
+  const PARTS_CACHE_KEY = "parts_list_cache";
+  const PARTS_CACHE_TIME = "parts_list_time";
+  const PARTS_TTL = 24 * 60 * 60 * 1000;
+  const LOCS_CACHE_KEY = "locs_list_cache";
+  const LOCS_CACHE_TIME = "locs_list_time";
+  let allEntries = [];
+  let editingId = null;
+  let partsList = [];
+  let locationsList = [];
+
+  window.onload = function() {
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    applyTheme(savedTheme);
+
+    const savedName = localStorage.getItem("coordinator_name");
+    if (savedName) {
+      dismissNamePopup(savedName);
+    } else {
+      document.getElementById("nameOverlay").classList.remove("hidden");
+      setTimeout(() => document.getElementById("nameInput").focus(), 300);
+    }
+
+    prefetchEntries();
+    loadPartsList();
+    loadLocationsList();
+  };
+
+  function prefetchEntries() {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try { allEntries = JSON.parse(cached); } catch(e) {}
+    }
+    fetch(SCRIPT_URL + "?t=" + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        if (data.result === "success") {
+          allEntries = data.data || [];
+          localStorage.setItem(CACHE_KEY, JSON.stringify(allEntries));
+        }
+      })
+      .catch(() => {});
+  }
+
+  function loadPartsList() {
+    const cached = localStorage.getItem(PARTS_CACHE_KEY);
+    const cachedTime = localStorage.getItem(PARTS_CACHE_TIME);
+    const now = Date.now();
+    if (cached && cachedTime && (now - parseInt(cachedTime)) < PARTS_TTL) {
+      try { partsList = JSON.parse(cached); return; } catch(e) {}
+    }
+    fetch(SCRIPT_URL + "?action=parts&t=" + now)
+      .then(r => r.json())
+      .then(data => {
+        if (data.result === "success" && data.parts) {
+          partsList = data.parts;
+          localStorage.setItem(PARTS_CACHE_KEY, JSON.stringify(partsList));
+          localStorage.setItem(PARTS_CACHE_TIME, String(now));
+        }
+      })
+      .catch(() => {});
+  }
+
+  function onPartInput(val) {
+    const dropdown = document.getElementById("partDropdown");
+    const q = val.trim().toUpperCase();
+    if (q.length < 1) { dropdown.classList.remove("open"); return; }
+    const matches = partsList.filter(p => p.toUpperCase().includes(q)).slice(0, 8);
+    if (matches.length === 0) {
+      dropdown.innerHTML = `<div class="autocomplete-empty">No matches — you can still type freely</div>`;
+    } else {
+      dropdown.innerHTML = matches.map(p => {
+        const idx = p.toUpperCase().indexOf(q);
+        const highlighted = p.slice(0, idx) + "<mark>" + p.slice(idx, idx + q.length) + "</mark>" + p.slice(idx + q.length);
+        return `<div class="autocomplete-item" onmousedown="selectPart('${p.replace(/'/g, "\\'")}')">${highlighted}</div>`;
+      }).join("");
+    }
+    dropdown.classList.add("open");
+  }
+
+  function selectPart(val) {
+    document.getElementById("partNumber").value = val;
+    hideDropdown();
+  }
+
+  function hideDropdown() {
+    setTimeout(() => document.getElementById("partDropdown").classList.remove("open"), 150);
+  }
+
+  function loadLocationsList() {
+    const cached = localStorage.getItem(LOCS_CACHE_KEY);
+    const cachedTime = localStorage.getItem(LOCS_CACHE_TIME);
+    const now = Date.now();
+    if (cached && cachedTime && (now - parseInt(cachedTime)) < PARTS_TTL) {
+      try { locationsList = JSON.parse(cached); return; } catch(e) {}
+    }
+    fetch(SCRIPT_URL + "?action=locations&t=" + now)
+      .then(r => r.json())
+      .then(data => {
+        if (data.result === "success" && data.locations) {
+          locationsList = data.locations;
+          localStorage.setItem(LOCS_CACHE_KEY, JSON.stringify(locationsList));
+          localStorage.setItem(LOCS_CACHE_TIME, String(now));
+        }
+      })
+      .catch(() => {});
+  }
+
+  function onLocationInput(val) {
+    const dropdown = document.getElementById("locationDropdown");
+    const q = val.trim().toUpperCase();
+    if (q.length < 1) { dropdown.classList.remove("open"); return; }
+    const matches = locationsList.filter(l => l.toUpperCase().includes(q)).slice(0, 8);
+    if (matches.length === 0) {
+      dropdown.innerHTML = `<div class="autocomplete-empty">No matches — you can still type freely</div>`;
+    } else {
+      dropdown.innerHTML = matches.map(l => {
+        const idx = l.toUpperCase().indexOf(q);
+        const highlighted = l.slice(0, idx) + "<mark>" + l.slice(idx, idx + q.length) + "</mark>" + l.slice(idx + q.length);
+        return `<div class="autocomplete-item" onmousedown="selectLocation('${l.replace(/'/g, "\\'")}')">${highlighted}</div>`;
+      }).join("");
+    }
+    dropdown.classList.add("open");
+  }
+
+  function selectLocation(val) {
+    document.getElementById("location").value = val;
+    hideLocationDropdown();
+  }
+
+  function hideLocationDropdown() {
+    setTimeout(() => document.getElementById("locationDropdown").classList.remove("open"), 150);
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    applyTheme(next);
+    localStorage.setItem("theme", next);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const btn = document.getElementById("themeBtn");
+    btn.textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";
+  }
+
+  function confirmName() {
+    const name = document.getElementById("nameInput").value.trim();
+    if (!name) {
+      document.getElementById("nameInput").style.borderColor = "#dc2626";
+      setTimeout(() => document.getElementById("nameInput").style.borderColor = "", 1500);
+      return;
+    }
+    localStorage.setItem("coordinator_name", name);
+    dismissNamePopup(name);
+  }
+
+  function dismissNamePopup(name) {
+    document.getElementById("nameOverlay").classList.add("hidden");
+    document.getElementById("headerName").innerHTML =
+      name + ' <button class="change-name-btn" onclick="changeName()">change</button>';
+  }
+
+  function changeName() {
+    document.getElementById("nameInput").value = localStorage.getItem("coordinator_name") || "";
+    document.getElementById("nameOverlay").classList.remove("hidden");
+    setTimeout(() => document.getElementById("nameInput").focus(), 300);
+  }
+
+  const TABS = ["log", "entries", "mine"];
+  let currentTabIndex = 0;
+
+  function switchTab(tab) {
+    currentTabIndex = TABS.indexOf(tab);
+    document.querySelectorAll(".tab").forEach((t, i) => {
+      t.classList.toggle("active", i === currentTabIndex);
+    });
+    document.getElementById("pagesInner").style.transform = `translateX(-${currentTabIndex * 100}%)`;
+    window.scrollTo({ top: 0, behavior: "instant" });
+    if (tab === "entries") loadEntries(true);
+    if (tab === "mine") renderMineEntries();
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast" + (isError ? " error" : "") + " show";
+    setTimeout(() => t.className = "toast" + (isError ? " error" : ""), 2800);
+  }
+
+  function formatDate(val) {
+    if (!val) return "";
+    const d = new Date(val);
+    if (isNaN(d)) return val;
+    const datePart = d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+    const timePart = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return datePart + "\n" + timePart;
+  }
+
+  function formatDateInline(val) {
+    if (!val) return "";
+    const d = new Date(val);
+    if (isNaN(d)) return val;
+    return d.toLocaleDateString([], { month: "short", day: "numeric" }) +
+      " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function submitEntry() {
+    const coordinator = localStorage.getItem("coordinator_name");
+    const partNumber = document.getElementById("partNumber").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const location = document.getElementById("location").value.trim();
+    const qty = document.getElementById("qty").value.trim();
+
+    if (!partNumber || !location || !qty) { showToast("Fill in all fields first", true); return; }
+
+    const duplicate = allEntries.find(e => String(e.partNumber).toLowerCase() === partNumber.toLowerCase());
+    if (duplicate) {
+      openDupModal(duplicate, partNumber);
+      return;
+    }
+
+    saveNewEntry(coordinator, partNumber, description, location, qty);
+  }
+
+  function saveNewEntry(coordinator, partNumber, description, location, qty) {
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving...';
+
+    fetch(SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coordinator, partNumber, description, location, qty: parseInt(qty) })
+    })
+    .then(() => {
+      showToast("Entry logged!");
+      const newEntry = {
+        partNumber, description, location, qty: parseInt(qty),
+        coordinator, timestamp: new Date().toISOString(),
+        id: "local-" + Date.now(), lastEditedBy: "", lastEditedAt: ""
+      };
+      const mineCache = JSON.parse(localStorage.getItem("mine_cache") || "[]");
+      mineCache.unshift(newEntry);
+      localStorage.setItem("mine_cache", JSON.stringify(mineCache));
+      renderMineEntries();
+      document.getElementById("partNumber").value = "";
+      document.getElementById("description").value = "";
+      document.getElementById("location").value = "";
+      document.getElementById("qty").value = "";
+      document.getElementById("partNumber").focus();
+      setTimeout(() => {
+        prefetchEntries();
+        loadEntries(true);
+      }, 1500);
+    })
+    .catch(() => showToast("Failed to save. Check connection.", true))
+    .finally(() => { btn.disabled = false; btn.innerHTML = "Log Entry"; });
+  }
+
+  function openDupModal(existing, partNumber) {
+    document.getElementById("dupMsg").textContent =
+      `Part #${partNumber} is already logged. Return it to its original location or update the location and quantity below.`;
+    document.getElementById("dupLocation").textContent = existing.location;
+    document.getElementById("dup-location").value = "";
+    document.getElementById("dup-qty").value = existing.qty;
+    document.getElementById("dupModal").classList.add("open");
+
+    document.getElementById("dupCancelBtn").onclick = function() {
+      document.getElementById("dupModal").classList.remove("open");
+    };
+
+    document.getElementById("dupSaveBtn").onclick = function() {
+      const newQty = document.getElementById("dup-qty").value.trim();
+      const newLocation = document.getElementById("dup-location").value.trim() || existing.location;
+      if (!newQty) { showToast("Enter a quantity", true); return; }
+      const coordinator = localStorage.getItem("coordinator_name");
+      const btn = document.getElementById("dupSaveBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      fetch(SCRIPT_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          id: existing.id,
+          coordinator,
+          partNumber: existing.partNumber,
+          description: existing.description || "",
+          location: newLocation,
+          qty: parseInt(newQty)
+        })
+      })
+      .then(() => {
+        showToast("Entry updated!");
+        document.getElementById("dupModal").classList.remove("open");
+        document.getElementById("partNumber").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("location").value = "";
+        document.getElementById("qty").value = "";
+        setTimeout(() => { prefetchEntries(); loadEntries(true); }, 1500);
+      })
+      .catch(() => showToast("Failed to update. Check connection.", true))
+      .finally(() => { btn.disabled = false; btn.innerHTML = "Update Entry"; });
+    };
+  }
+
+  function loadEntries(forceRefresh) {
+    const list = document.getElementById("entriesList");
+
+    if (allEntries.length > 0) {
+      renderEntries();
+      if (!forceRefresh) return;
+      list.innerHTML += '';
+    } else {
+      list.innerHTML = '<div class="loading-state"><span class="spinner"></span> Loading...</div>';
+    }
+
+    fetch(SCRIPT_URL + "?t=" + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        if (data.result !== "success") throw new Error(data.message);
+        allEntries = data.data || [];
+        localStorage.setItem(CACHE_KEY, JSON.stringify(allEntries));
+        renderEntries();
+        if (forceRefresh) showToast("Entries refreshed");
+      })
+      .catch(() => {
+        if (allEntries.length === 0) {
+          list.innerHTML = '<div class="no-entries">Could not load entries. Tap Refresh to try again.</div>';
+        }
+      });
+  }
+
+  function renderEntries() {
+    const list = document.getElementById("entriesList");
+    const searchVal = (document.getElementById("searchInput")?.value || "").trim().toLowerCase();
+    const filterField = document.getElementById("searchFilter")?.value || "all";
+
+    let filtered = allEntries;
+    if (searchVal) {
+      filtered = allEntries.filter(e => {
+        const dateAdded = formatDateInline(e.timestamp).toLowerCase();
+        const dateEdited = formatDateInline(e.lastEditedAt).toLowerCase();
+        if (filterField === "partNumber") return String(e.partNumber).toLowerCase().includes(searchVal);
+        if (filterField === "description") return String(e.description || "").toLowerCase().includes(searchVal);
+        if (filterField === "location") return String(e.location).toLowerCase().includes(searchVal);
+        if (filterField === "qty") return String(e.qty).includes(searchVal);
+        if (filterField === "coordinator") return String(e.coordinator).toLowerCase().includes(searchVal);
+        if (filterField === "dateAdded") return dateAdded.includes(searchVal);
+        if (filterField === "dateEdited") return dateEdited.includes(searchVal);
+        // All Fields: split into words and every word must match at least one field
+        const terms = searchVal.split(/\s+/).filter(Boolean);
+        const haystack = [
+          String(e.partNumber).toLowerCase(),
+          String(e.description || "").toLowerCase(),
+          String(e.location).toLowerCase(),
+          String(e.qty),
+          String(e.coordinator).toLowerCase(),
+          dateAdded,
+          dateEdited
+        ].join(" ");
+        return terms.every(term => haystack.includes(term));
+      });
+    }
+
+    const countEl = document.getElementById("resultsCount");
+    if (countEl) {
+      countEl.textContent = searchVal
+        ? `${filtered.length} of ${allEntries.length} entries`
+        : `${allEntries.length} total entries`;
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = searchVal
+        ? '<div class="no-entries">No entries match your search</div>'
+        : '<div class="no-entries">No entries yet</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(e => {
+      const wasEdited = e.lastEditedBy && e.lastEditedBy !== "";
+      return `
+        <div class="entry-card ${wasEdited ? "edited" : ""}">
+          <div class="entry-top">
+            <div class="entry-left">
+              <div class="entry-part">Part #: ${e.partNumber}</div>
+              <div><span class="entry-location">Location: ${e.location}</span></div>
+              <div><span class="entry-qty">Qty: ${e.qty}</span></div>
+              ${e.description ? `<div class="entry-description">${e.description}</div>` : ""}
+            </div>
+            <div class="entry-right">
+              ${wasEdited ? `
+                <div class="entry-edited-badge">
+                  <span class="badge-name">Edited by: ${e.lastEditedBy}</span>
+                  <span class="badge-date">${formatDateInline(e.lastEditedAt)}</span>
+                </div>` : ""}
+            </div>
+          </div>
+          <div class="entry-coordinator">Added by: ${e.coordinator} · ${formatDateInline(e.timestamp)}</div>
+          <button class="edit-btn" onclick="openEdit('${e.id}')">Edit Entry</button>
+        </div>`;
+    }).join("");
+  }
+
+  function openEdit(id) {
+    const entry = allEntries.find(e => String(e.id) === String(id));
+    if (!entry) return;
+    editingId = id;
+    document.getElementById("edit-partNumber").value = entry.partNumber;
+    document.getElementById("edit-description").value = entry.description || "";
+    document.getElementById("edit-location").value = entry.location;
+    document.getElementById("edit-qty").value = entry.qty;
+    document.getElementById("editModal").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("editModal").classList.remove("open");
+    editingId = null;
+  }
+
+  function saveEdit() {
+    const coordinator = localStorage.getItem("coordinator_name");
+    const partNumber = document.getElementById("edit-partNumber").value.trim();
+    const description = document.getElementById("edit-description").value.trim();
+    const location = document.getElementById("edit-location").value.trim();
+    const qty = document.getElementById("edit-qty").value.trim();
+
+    if (!partNumber || !location || !qty) { showToast("Fill in all fields", true); return; }
+
+    const btn = document.getElementById("saveEditBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    fetch(SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", id: editingId, coordinator, partNumber, description, location, qty: parseInt(qty) })
+    })
+    .then(() => {
+      showToast("Entry updated!");
+      closeModal();
+      setTimeout(() => loadEntries(true), 1000);
+    })
+    .catch(() => showToast("Failed to update. Check connection.", true))
+    .finally(() => { btn.disabled = false; btn.innerHTML = "Save Changes"; });
+  }
+
+  function renderMineEntries() {
+    const list = document.getElementById("mineList");
+    const countEl = document.getElementById("mineCount");
+    const mineCache = JSON.parse(localStorage.getItem("mine_cache") || "[]");
+    if (countEl) countEl.textContent = `${mineCache.length} entr${mineCache.length === 1 ? "y" : "ies"} logged on this device`;
+    if (mineCache.length === 0) {
+      list.innerHTML = '<div class="no-entries">No entries logged on this device yet</div>';
+      return;
+    }
+    list.innerHTML = mineCache.map((e, i) => {
+      return `
+        <div class="entry-card">
+          <div class="entry-top">
+            <div class="entry-left">
+              <div class="entry-part">Part #: ${e.partNumber}</div>
+              <div><span class="entry-location">Location: ${e.location}</span></div>
+              <div><span class="entry-qty">Qty: ${e.qty}</span></div>
+              ${e.description ? `<div class="entry-description">${e.description}</div>` : ""}
+            </div>
+            <div class="entry-right">
+              <button class="mine-trash-btn" onclick="deleteMineEntry(${i})" title="Remove from My Entries">🗑</button>
+            </div>
+          </div>
+          <div class="entry-coordinator">Added by: ${e.coordinator} · ${formatDateInline(e.timestamp)}</div>
+        </div>`;
+    }).join("");
+  }
+
+  function deleteMineEntry(index) {
+    const mineCache = JSON.parse(localStorage.getItem("mine_cache") || "[]");
+    mineCache.splice(index, 1);
+    localStorage.setItem("mine_cache", JSON.stringify(mineCache));
+    renderMineEntries();
+    showToast("Removed from My Entries");
+  }
+
+  function clearMineEntries() {
+    if (!confirm("Clear all entries logged on this device? This only removes them from this device's history, not from the Google Sheet.")) return;
+    localStorage.removeItem("mine_cache");
+    renderMineEntries();
+    showToast("Device history cleared");
+  }
+
+  document.getElementById("confirmNameBtn").addEventListener("click", confirmName);
+  document.getElementById("nameInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") confirmName();
+  });
+
+  (function() {
+    const btn = document.getElementById("scrollTopBtn");
+    const header = document.querySelector("header");
+    window.addEventListener("scroll", function() {
+      const headerBottom = header.getBoundingClientRect().bottom;
+      if (headerBottom < 0) {
+        btn.classList.add("visible");
+      } else {
+        btn.classList.remove("visible");
+      }
+    }, { passive: true });
+  })();
+
+  (function() {
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var SWIPE_THRESHOLD = 50;
+    var VERTICAL_LIMIT = 75;
+
+    document.addEventListener("touchstart", function(e) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener("touchend", function(e) {
+      if (!document.getElementById("nameOverlay").classList.contains("hidden")) return;
+      if (document.getElementById("editModal").classList.contains("open")) return;
+
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      var dy = e.changedTouches[0].clientY - touchStartY;
+
+      if (Math.abs(dy) > VERTICAL_LIMIT) return;
+      if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+
+      if (dx < 0 && currentTabIndex < TABS.length - 1) {
+        switchTab(TABS[currentTabIndex + 1]);
+      } else if (dx > 0 && currentTabIndex > 0) {
+        switchTab(TABS[currentTabIndex - 1]);
+      }
+    }, { passive: true });
+  })();
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/inventory-log/sw.js").catch(() => {});
+    navigator.serviceWorker.addEventListener("controllerchange", function() {
+      window.location.reload();
+    });
+  }
+</script>
+</body>
+</html>
